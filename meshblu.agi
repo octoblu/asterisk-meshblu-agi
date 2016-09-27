@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+
+const MeshbluSocketIO = require('meshblu')
+const meshblu = new MeshbluSocketIO(require('./meshblu.json'))
+const readline = require('readline').createInterface({ input: process.stdin })
+const async = require('async')
+
+const programTimeout = 5*1000
+const commandTimeout = 2*1000
+
+const readArgs = (callback) => {
+  let args = {}
+  const readArg = (input) => {
+    const result = input.match(/^agi_(.*?): (.*)$/)
+    if (result) args[result[1]] = result[2]
+    if (!input) {
+      readline.removeListener('line',readArg)
+      return callback(args)
+    }
+  }
+  readline.on('line', readArg)
+}
+
+const sendCommand = (command, callback=()=>{}) => {
+  console.log(command)
+  const errorTimeout = setTimeout(()=>callback(new Error('timeout')),commandTimeout)
+  readline.once('line', (input) => {
+    clearTimeout(errorTimeout)
+    const result = input.match(/^(.*?) result=(.*)$/) || [,'200']
+    callback( result[1]==='200' ? null : new Error(result[1]), result[2])
+  })
+}
+
+const setVariable = (key, val, callback) => {
+  sendCommand(`SET VARIABLE "${key}" "${val}"`, callback)
+}
+
+const exitFailure = () => setVariable('AGISTATUS', 'FAILURE', ()=>process.exit(1))
+const exitSuccess = () => setVariable('AGISTATUS', 'SUCCESS', ()=>process.exit(0))
+
+setTimeout(exitFailure, programTimeout)
+
+readArgs((args) => {
+  console.error({args})
+
+  meshblu.once('ready', () => meshblu.message({ devices:'*', payload:args }))
+
+  meshblu.once('message', (message) => {
+    console.error({message})
+    async.eachSeries(
+      Object.keys(message),
+      (key, done) => setVariable(`meshblu_${key}`, message[key], done),
+      (error) => error ? exitFailure() : exitSuccess()
+    )
+  })
+
+  meshblu.once('notReady', (response) => {
+    console.error({ notReady:response })
+    exitFailure()
+  })
+
+  meshblu.connect()
+})
