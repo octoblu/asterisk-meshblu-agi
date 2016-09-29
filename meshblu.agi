@@ -2,7 +2,7 @@
 "use strict"
 
 const MeshbluSocketIO = require('meshblu')
-const meshblu = new MeshbluSocketIO(require(process.cwd()+'/meshblu.json'))
+const meshblu = new MeshbluSocketIO(require('./meshblu.json'))
 const readline = require('readline').createInterface({ input: process.stdin })
 const async = require('async')
 

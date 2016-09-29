@@ -1,6 +1,6 @@
 {
   "name": "asterisk-meshblu-agi",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Asterisk AGI command for sending and receiving meshblu messages.",
   "bin": {
     "meshblu.agi": "meshblu.agi"
